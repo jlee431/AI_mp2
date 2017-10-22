@@ -47,144 +47,148 @@ for y in range(grid_height):
 		if(not sources[y][x]):
 			domains[y][x] = list(color_list)
 
-# Directions of neighboring spaces
-	neighbor_dir = [(0,1),(0,-1),(1,0),(-1,0)]
+def isComplete(variables):
+	for y in range(grid_height):
+		for x in range(grid_width):
+			if(variables[y][x] is None):
+				return False
+	return True
 
-# Defines the state representation
-class State:
-	def __init__(self, variables, domains):
-		self.variables = variables
-		self.domains = domains
-		self.calculateUnassigned()
-
-	def calculateUnassigned():
-		self.unassignedVars = []
+def getNextVariable(variables):
+	var_list = getNextVariable.var_list
+	
+	# Initialize unassigned variable list
+	if(var_list is None):
+		var_list = []
 		for y in range(grid_height):
 			for x in range(grid_width):
-				if(self.variables[y][x] is None):
-					self.unassignedVars.append((x,y))
+				if(variables[y][x] is None):
+					var_list.append((x, y))
 
-	def isComplete(self):
-		return not self.unassignedVars
+	# Return next unassigned variable
+	index = random.randint(0, len(var_list)-1)
+	return var_list.pop(index)
+getNextVariable.var_list = None
 
-	def getNextVariable(self):
-		return self.unassignedVars(randint(0, len(self.unassignedVars)-1))
+def getValuesByPriority(variables, x, y):
+	priorities = getValuesByPriority.priorities
+	if(priorities is None):
+		priorities = list(color_list)
+		random.shuffle(priorities)
+	return priorities
+getValuesByPriority.priorities = None
 
-	def areConstraintsViolated(x, y):
-		# Check bounds
-		if(x < 0 or y < 0 or x >= grid_width or y >= grid_height):
-			return False
+def constraintsAreViolated(variables, x, y):
+	# Check bounds
+	if(x < 0 or y < 0 or x >= grid_width or y >= grid_height):
+		return False
 		
-		value = self.variables[y][x]
+	value = variables[y][x]
 
-		# Check for unassigned varaible
-		if(value is None):
-			return False
+	# Check for unassigned variable
+	if(value is None):
+		return False
+		neighbor_colors = {}
 
-		# Records number of different and same colors nearby
-		num_diff = 0
-		num_same = 0
-
-		# Cycle through neighbors
+		# Check if surrounding colors are all different
 		for i, j in neighbor_dir:
 			n_x = x+i
 			n_y = y+j
 
 			# Check bounds
 			if(n_x >= 0 and n_y >= 0 and n_x < grid_width and n_y < grid_height):
-				neighbor_value = self.variables[n_y][n_x]
+				color = variables[n_y][n_x]
+				if(color is None):
+					return False
+				if(color in neighbor_colors):
+					return False
+				else:
+					neighbor_colors[color] = True
 
-				if(neighbor_value is not None):
-					if(neighbor_value != value):
-						num_diff = num_diff + 1
-					else:
-						num_same = num_same + 1
+		return True
 
-		if(sources[y][x]):
-			if(num_diff > 3 or num_same > 1):
-				return True
-		elif(num_diff > 2 or num_same > 2):
+	# Records number of different and same colors nearby
+	num_diff = 0
+	num_same = 0
+
+	# Cycle through neighbors
+	for i, j in neighbor_dir:
+		n_x = x+i
+		n_y = y+j
+
+		# Check bounds
+		if(n_x >= 0 and n_y >= 0 and n_x < grid_width and n_y < grid_height):
+			neighbor_value = variables[n_y][n_x]
+
+			if(neighbor_value is not None):
+				if(neighbor_value != value):
+					num_diff = num_diff + 1
+				else:
+					num_same = num_same + 1
+		else:
+			num_diff = num_diff + 1
+
+	if(sources[y][x]):
+		if(num_diff > 3 or num_same > 1):
 			return True
+	elif(num_diff > 2 or num_same > 2):
+		return True
 
+	return False
+
+def validAssignment(variables, x, y):
+	# Check assigned variable's constraints
+	if(constraintsAreViolated(variables, x, y)):
 		return False
 
-	def adjustDomains(domains, x, y):
-		# Check bounds
-		if(x < 0 or y < 0 or x >= grid_width or y >= grid_height):
-			return
+	# Check neighbors' constraints
+	for i, j in neighbor_dir:
+		if(constraintsAreViolated(variables, x+i, y+j)):
+			return False
 
-		
+	return True
 
-	def assignValue(x, y, value):
-		if(self.variables[y][x] is not None):
-			print("Variable at position " + str(x) + ", " + str(y) + " already asigned.")
-			return None
-
-		self.variables[y][x] = value
-
-		for i, j in neighbor_dir:
-			n_x = x + i
-			n_y = y + j
-
-			if(self.areConstraintsViolated(n_x, n_y)):
-				self.variables[y][x] = None
-				return None
-
-		new_variables = copy.deepcopy(self.variables)
-		new_domains = copy.deepcopy(self.domains)
-
-		self.variables[y][x] = None
-
-		new_domains[y][x] = None
-
-		for i, j in neighbor_dir:
-			n_x = x + i
-			n_y = y + j			
-
-			self.adjustDomains(new_domains, n_x, n_y)
-
-		return State(new_variables, new_domains)
-
-
-# Initialize stack
-stack = [State(variables, domains)]
-solution = None
-
-# Begin the search
-while stack:
-	# Pop next assignment from stack
-	current_state = stack.pop()
-	variables = current_state.variables
-	domains = current_state.domains
+# Search function
+def backtrackingSearch(variables):
 
 	# Check if assignment is complete
-	if(current_state.isComplete()):
-		solution = variables
-		break
+	if(isComplete(variables)):
+		return True
 
 	# Get the next variable to be assigned
-	next_x, next_y = current_state.getNextVariable()
+	next_x, next_y = getNextVariable(variables)
 
-	successor_list = []
+	# Get values by priority
+	value_list = getValuesByPriority(variables, x, y)
 
-	# Cycle through possible values
-	for value in domains[next_y][next_x]:
-		successor = current_state.assignValue(x, y, value)
+	# Cycle through values
+	for value in value_list:
+		# Assign value
+		variables[next_y][next_x] = value
 
-		if(successor is not None):
-			successor_list.append(successor)
+		# Check if assignment is valid
+		if(validAssignment(variables, next_x, next_y)):
+			# Recurse
+			if(backtrackingSearch(variables)):
+				return True
 
-	# Add successor states to stack
-	stack.extend(successor_list)
+	# Undo assignment
+	variables[next_y][next_x] = None
+	return False
 
 
-'''
-for line in sources:
-	for b in line:
-		if(b):
-			sys.stdout.write('T')
+# Directions of neighboring spaces
+neighbor_dir = [(0,1),(0,-1),(1,0),(-1,0)]
+
+backtrackingSearch(variables)
+
+
+for line in variables:
+	for c in line:
+		if(c is not None):
+			sys.stdout.write(c)
 		else:
-			sys.stdout.write('F')
+			sys.stdout.write(' ')
 	sys.stdout.write('\n')
-'''
+
 
