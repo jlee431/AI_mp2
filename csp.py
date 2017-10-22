@@ -109,6 +109,10 @@ class State:
 		return False
 
 	def adjustDomains(domains, x, y):
+		# Check bounds
+		if(x < 0 or y < 0 or x >= grid_width or y >= grid_height):
+			return
+
 		
 
 	def assignValue(x, y, value):

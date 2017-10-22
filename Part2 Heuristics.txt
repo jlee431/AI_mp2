@@ -1,0 +1,3 @@
+Defensive: 2(num of own peices on side of board) - (num of opponents pieces across middle) + random()
+
+Offensice: 2(Distance of farthest own piece) + random()
