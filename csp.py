@@ -1,8 +1,9 @@
 import sys
 import random
-import copy
 import timeit
-import heapq
+import math
+from imageio import *
+import numpy as np
 
 if(len(sys.argv) !=2):
 	print("USAGE: csp.py input_file")
@@ -344,6 +345,69 @@ def backtrackingSearch(variables, domains, attempts, var_order = None):
 	variables[y][x] = None
 	return False
 
+color_references = [[255,0,0], [0,255,0], [0,0,255], [255,255,0], [255,0,255],
+					[0,255,255], [255,102,102], [153,255,153], [153,255,255],
+					[255,153,255], [102,0,51], [255,128,0], [0,153,153],
+					[102,51,0], [102,0,102], [128,128,128], [255,255,255]]
+
+def drawSolution(filename, solution):
+	square_size = 64
+	source_radius = 28
+	pipe_width = 28
+	image = np.zeros((grid_height*square_size, grid_width*square_size, 3), dtype=np.uint8)
+
+	next_ref = 0
+	color_map = {}
+
+	# Fill in image
+	for y in range(grid_height):
+		for x in range(grid_width):
+			# Get value of square
+			value = solution[y][x]
+
+			# Check if value has color assignment
+			if(value not in color_map):
+				color_map[value] = next_ref
+				next_ref = next_ref + 1
+
+			ref = color_map[value] 
+
+			if(sources[y][x]):
+				radius = source_radius
+			else:
+				radius = pipe_width//2
+			center = square_size//2
+			for i in range(square_size):
+				for j in range(square_size):
+						i_dist = abs(i - center)
+						j_dist = abs(j - center)
+						dist = math.sqrt(i_dist ** 2 + j_dist ** 2)
+						if(dist < radius):
+							image[square_size*y+i][square_size*x+j] = color_references[ref]
+
+	for y in range(grid_height):
+		for x in range(grid_width):
+			value = solution[y][x]
+
+			# Get color assignment
+			ref = color_map[value]
+
+			if(inBounds(x, y+1) and value == solution[y+1][x]):
+				start_x = square_size*x + square_size//2 - pipe_width//2
+				start_y = square_size*y + square_size//2
+				for i in range(square_size):
+					for j in range(pipe_width):
+						image[start_y + i][start_x + j] = color_references[ref]
+
+			if(inBounds(x+1, y) and value == solution[y][x+1]):
+				start_x = square_size*x + square_size//2
+				start_y = square_size*y + square_size//2 - pipe_width//2
+				for i in range(pipe_width):
+					for j in range(square_size):
+						image[start_y + i][start_x + j] = color_references[ref]
+
+	imwrite(filename, image)
+
 
 # Directions of neighboring spaces
 neighbor_dir = [(0,1),(0,-1),(1,0),(-1,0)]
@@ -355,6 +419,9 @@ isSmart = True
 backtrackingSearch(variables, domains, attempts)
 
 endtime = timeit.default_timer() - start_time
+
+image_filename = "images\soln_" + sys.argv[1][:-4] + ".jpg"
+drawSolution(image_filename, variables)
 
 print("Time: " + str(endtime) + " seconds")
 print("Attempted Assignments: " + str(attempts[0]))
