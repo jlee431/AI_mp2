@@ -94,7 +94,9 @@ def isComplete(variables):
 				return False
 	return True
 
-def calcVariableWeight(variables, x, y):
+def calcVariableWeight(variables, domains, x, y):
+	return len(domains[y][x])
+
 	weight = 0
 	for i, j in neighbor_dir:
 		n_x = x + i
@@ -106,7 +108,7 @@ def calcVariableWeight(variables, x, y):
 				weight = weight + 1
 	return weight
 
-def getVariableOrder(variables):
+def getVariableOrder(variables, domains):
 	
 	# Initialize unassigned variable list
 	var_order = []
@@ -114,7 +116,7 @@ def getVariableOrder(variables):
 		for x in range(grid_width):
 			if(variables[y][x] is None):
 				if(isSmart):
-					weight = calcVariableWeight(variables, x, y)
+					weight = calcVariableWeight(variables, domains, x, y)
 					var_order.append((weight, (x,y)))
 				else:
 					var_order.append((x, y))
@@ -263,23 +265,21 @@ def validAssignment(variables, domains, x, y):
 
 	return True
 
-def updateVariableOrder(variables, var_order, x, y):
+def updateVariableOrder(variables, domains, var_order, x, y):
 
 	for i, j in neighbor_dir:
 		n_x = x + i
 		n_y = y + j
 
-		#print("Nx: "+str(n_x)+" Ny: "+str(n_y))
 		if(inBounds(n_x, n_y)):
 			if(variables[n_y][n_x] is None):
 				index = 0
 				#print(str(var_order))
 				while index < len(var_order) and var_order[index][1] != (n_x,n_y):
-					#print("Ix: "+str(n_x)+" Iy: "+str(n_y))
 					index = index + 1
 				if(index < len(var_order)):
-					weight = var_order[index][0]
-					var_order[index] = (weight+1, (n_x,n_y))
+					#weight = var_order[index][0]
+					var_order[index] = (len(domains[n_y][n_x]), (n_x,n_y)) #(weight+1, (n_x,n_y))
 
 	var_order.sort()
 
@@ -291,12 +291,12 @@ def backtrackingSearch(variables, domains, attempts, var_order = None):
 		return True
 
 	if(var_order is None):
-		var_order = getVariableOrder(variables)
+		var_order = getVariableOrder(variables, domains)
 		#print(str(var_order))
 
 	# Get the next variable to be assigned
 	if(isSmart):
-		x, y = var_order.pop()[1]
+		x, y = var_order.pop(0)[1]
 	else:
 		index = random.randint(0, len(var_order)-1)
 		x, y = var_order.pop(index)
@@ -305,7 +305,7 @@ def backtrackingSearch(variables, domains, attempts, var_order = None):
 	value_list = getValuesByPriority(variables, domains, x, y)
 
 	# Prepare for assignment
-	updateVariableOrder(variables, var_order, x, y)
+	updateVariableOrder(variables, domains, var_order, x, y)
 #	updateDomainRanking(variables, domains, x, y)
 
 	# Cycle through values
