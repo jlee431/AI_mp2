@@ -18,6 +18,8 @@ struct Position {
     }
 };
 
+typedef pair<Position, Position> Move;
+
 enum class Worker : int { BLACK, WHITE, NONE };
 
 class State {
@@ -65,7 +67,7 @@ public:
         return Worker::NONE;
     }
 
-    bool isLegalMove(pair<Position, Position> &move) {
+    bool isLegalMove(Move &move) {
         // first --> second
         if (
             move.second.x < 0 ||
@@ -80,7 +82,7 @@ public:
         return true;
     }
 
-    vector<pair<Position, Position>> possibleMoves(Worker worker) {
+    vector<Move> possibleMoves(Worker worker) {
 
         Position next[2][3] = {
             {{-1, 1}, {0, 1}, {1, 1}},
@@ -89,9 +91,9 @@ public:
 
         int posSel = static_cast<int>(worker);
 
-        pair<Position, Position> tempMove;
+        Move tempMove;
 
-        vector<pair<Position, Position>> output;
+        vector<Move> output;
 
         for (int y = 0; y < WIDTH; ++y) {
             for (int x = 0; x < WIDTH; ++x) {
@@ -107,7 +109,7 @@ public:
     } // end possibleMoves
 
     // TODO
-    // State move(pair<Position, Position> &move) {}
+    // State move(Move &move) {}
 
     Worker opponent(Worker worker) {
         return static_cast<Worker>((~static_cast<int>(worker)) & 1);
@@ -129,12 +131,29 @@ class Player {
     Worker worker;
     const H heuristic_f;
 
+    int numOfExpandedNodes;
+
+    // TODO
+    // vector<int> expandedNodesVec;
+    // vector<time> timeVec;
+
+    int capturedWorkers;
+
+    bool useAlphaBeta;
+    int depth;
+
 public:
 
-    Player(Worker w, const H &h)
+    Player(Worker w, const H &h, bool useAlphaBeta)
       : worker(w)
       , heuristic_f(h)
+      , numOfExpandedNodes(0)
+      , capturedWorkers(0)
+      , useAlphaBeta(useAlphaBeta)
+      , depth(useAlphaBeta ? 5 : 3)
     { }
+
+
 
 };
 
