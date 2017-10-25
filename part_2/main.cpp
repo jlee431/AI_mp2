@@ -144,7 +144,7 @@ class Player {
 
 public:
 
-    Player(Worker w, const H &h, bool useAlphaBeta)
+    Player(Worker w, const H &h, bool useAlphaBeta = false)
       : worker(w)
       , heuristic_f(h)
       , numOfExpandedNodes(0)
@@ -153,7 +153,14 @@ public:
       , depth(useAlphaBeta ? 5 : 3)
     { }
 
+    // TODO
+    Move nextMove(State state, int curentDepth) {
 
+    }
+
+    Move nextMove(State &state) {
+        return nextMove(state, depth);
+    }
 
 };
 
@@ -195,7 +202,6 @@ int main() {
             }
         }
 
-
         return 2 * ownPiecesOnTheBorder - opponentsPiecesAcrossMiddle + myRand();
 
     }; // end defHeuristic_2
@@ -224,7 +230,7 @@ int main() {
 
         return 2 * farthestOwnPiece + myRand();
 
-    }; // end
+    }; // end offHeuristic_2
 
     State state;
 
