@@ -61,10 +61,7 @@ for y in range(grid_height):
 					domains[n_y][n_x][value] = domains[n_y][n_x][value] + 2'''
 
 def inBounds(x, y):
-	if(x >= 0 and y >= 0 and x < grid_width and y < grid_height):
-		return True
-	else:
-		return False
+	return (x >= 0 and y >= 0 and x < grid_width and y < grid_height)
 
 def initDomains():
 	domains = [None]*grid_height
@@ -189,6 +186,7 @@ def adjustNearbyDomains(variables, domains, x, y):
 			# Check if a domain was emptied
 			if(not domains[n_y][n_x]):
 				return True
+	return False
 
 def constraintsAreViolated(variables, domains, x, y):
 	# Check bounds
