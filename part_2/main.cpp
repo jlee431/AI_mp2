@@ -154,13 +154,13 @@ public:
     { }
 
     // TODO
-    Move nextMove(State state, int curentDepth) {
+    /* Move nextMove(State state, int curentDepth) {
 
     }
 
     Move nextMove(State &state) {
         return nextMove(state, depth);
-    }
+    } */
 
 };
 
