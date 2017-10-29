@@ -56,7 +56,10 @@ public:
         return *this;
     }
 
-    Worker checkWinner() {
+    // TODO
+    // State nextState(const Move &move) const { }
+
+    Worker checkWinner() const {
         for (int i = 0; i < 2; ++i) {
             if (!piecesLeft[(~i) & 1]) return static_cast<Worker>(i);
         }
@@ -67,7 +70,7 @@ public:
         return Worker::NONE;
     }
 
-    bool isLegalMove(Move &move) {
+    bool isLegalMove(const Move &move) const {
         // first --> second
         if (
             move.second.x < 0 ||
@@ -82,7 +85,7 @@ public:
         return true;
     }
 
-    vector<Move> possibleMoves(Worker worker) {
+    vector<Move> possibleMoves(const Worker worker) const {
 
         Position next[2][3] = {
             {{-1, 1}, {0, 1}, {1, 1}},
@@ -108,18 +111,15 @@ public:
 
     } // end possibleMoves
 
-    // TODO
-    // State move(Move &move) {}
-
-    Worker opponent(Worker worker) {
+    Worker opponent(const Worker worker) const {
         return static_cast<Worker>((~static_cast<int>(worker)) & 1);
     }
 
-    int getPiecesLeft(Worker worker) {
+    int getPiecesLeft(const Worker worker) const {
         return piecesLeft[static_cast<int>(worker)];
     }
 
-    const vector<vector<Worker>>& getState() {
+    const vector<vector<Worker>>& getState() const {
         return state;
     }
 
@@ -128,7 +128,7 @@ public:
 template<typename H>
 class Player {
 
-    Worker worker;
+    const Worker worker;
     const H heuristic_f;
 
     int numOfExpandedNodes;
@@ -139,12 +139,12 @@ class Player {
 
     int capturedWorkers;
 
-    bool useAlphaBeta;
-    int depth;
+    const bool useAlphaBeta;
+    const int depth;
 
 public:
 
-    Player(Worker w, const H &h, bool useAlphaBeta = false)
+    Player(const Worker w, const H &h, bool useAlphaBeta = false)
       : worker(w)
       , heuristic_f(h)
       , numOfExpandedNodes(0)
@@ -153,13 +153,19 @@ public:
       , depth(useAlphaBeta ? 5 : 3)
     { }
 
-    // TODO
-    /* Move nextMove(State state, int curentDepth) {
+    /* Move nextMove(const State state, const int curentDepth, const Worker currentWorker) {
+
+        vector<Move> moves = state.possibleMoves(currentWorker);
+
+        int a = curentDepth;
+        ++a;
+
+
 
     }
 
     Move nextMove(State &state) {
-        return nextMove(state, depth);
+        return nextMove(state, depth, worker);
     } */
 
 };
