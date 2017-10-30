@@ -63,23 +63,31 @@ public:
 
     State(const State &other) {
         state.assign(WIDTH, vector<Worker>(WIDTH, Worker::NONE));
+        piecesLeft[0] = 0;
+        piecesLeft[1] = 0;
         for (int y = 0; y < WIDTH; ++y) {
             for (int x = 0; x < WIDTH; ++x) {
+                if (other.state[y][x] == Worker::NONE) continue;
                 state[y][x] = other.state[y][x];
+                ++piecesLeft[static_cast<int>(state[y][x])];
             }
         }
-        for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
+        // for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
     }
 
     State& operator=(const State &other) {
         if (this != &other) {
+            piecesLeft[0] = 0;
+            piecesLeft[1] = 0;
             state.assign(WIDTH, vector<Worker>(WIDTH, Worker::NONE));
             for (int y = 0; y < WIDTH; ++y) {
                 for (int x = 0; x < WIDTH; ++x) {
+                    if (other.state[y][x] == Worker::NONE) continue;
                     state[y][x] = other.state[y][x];
+                    ++piecesLeft[static_cast<int>(state[y][x])];
                 }
             }
-            for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
+            // for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
         }
         return *this;
     }
@@ -113,7 +121,7 @@ public:
             move.second.y < 0 ||
             move.second.y >= WIDTH ||
             state[move.first.y][move.first.x] == state[move.second.y][move.second.x] ||
-            (state[move.second.y][move.second.x] != Worker::NONE && move.first.y == move.second.y)
+            (state[move.second.y][move.second.x] != Worker::NONE && move.first.x == move.second.x)
         ) {
             return false;
         }
@@ -250,7 +258,24 @@ public:
         int &expandedNodes
     ) {
 
-        if (curentDepth == 0) return heuristic_f(state, currentWorker);
+        // if (curentDepth == 0) return heuristic_f(state, currentWorker);
+        if (curentDepth == 0) {
+            // return heuristic_f(state, worker);
+
+            double h = heuristic_f(state, worker);
+
+            /* if (worker == Worker::BLACK) {
+                printf("worker: %c\n", worker == Worker::WHITE ? 'W' : 'B');
+                puts(state.toString().c_str());
+                printf("h = %f\n\n", h);
+
+
+                char temp = 'x';
+                while (temp != 'n') temp = getchar();
+            } */
+
+            return h;
+        }
 
         const bool isMax = currentWorker == worker;
 
@@ -333,20 +358,20 @@ public:
 }; // end class Player
 
 double myRand() {
-    srand(time(0));
+    // srand(time(0));
     return (rand() % 100) / 100.0;
 }
 
-int test(int player0, int player1, int useAlphaBeta) {
+int test(int player0, int player1, int useAlphaBeta0, int useAlphaBeta1) {
 
     auto defHeuristic_1 = [](State &state, Worker worker) -> double {
         // 2 * number_of_own_pieces_remaining + random()
-        return 2 * state.getPiecesLeft(worker) + myRand();
+        return 2.0 * state.getPiecesLeft(worker) + myRand();
     };
 
     auto offHeuristic_1 = [](State &state, Worker worker) -> double {
         // 2 * (30 - number_of_opponent_pieces_remaining) + random()
-        return 2 * (30 - state.getPiecesLeft(state.opponent(worker))) + myRand();
+        return 2.0 * (30 - state.getPiecesLeft(state.opponent(worker))) + myRand();
     };
 
     auto defHeuristic_2 = [](State &state, Worker worker) -> double {
@@ -370,7 +395,7 @@ int test(int player0, int player1, int useAlphaBeta) {
             }
         }
 
-        return 2 * ownPiecesOnTheBorder - opponentsPiecesAcrossMiddle + myRand();
+        return 2.0 * ownPiecesOnTheBorder - opponentsPiecesAcrossMiddle + myRand();
 
     }; // end defHeuristic_2
 
@@ -379,15 +404,15 @@ int test(int player0, int player1, int useAlphaBeta) {
 
         const vector<vector<Worker>>& board = state.getState();
 
-        int farthestOwnPiece = -1, startY = BOARD_WIDTH - 1, endY = 0, nextY = -1;
+        int farthestOwnPiece = -1, startY = BOARD_WIDTH - 1, endY = 0, nextY = 1;
         bool foundFarthest = false;
 
-        if (worker == Worker::WHITE) {
+        if (worker != Worker::WHITE) {
             swap(startY, endY);
             nextY *= -1;
         }
 
-        for (int y = startY; !foundFarthest && y - nextY != endY; y += nextY) {
+        for (int y = endY; !foundFarthest && y - nextY != startY; y += nextY) {
             for (int x = 0; !foundFarthest && x < BOARD_WIDTH; ++x) {
                 if (board[y][x] == worker) {
                     foundFarthest = true;
@@ -396,11 +421,12 @@ int test(int player0, int player1, int useAlphaBeta) {
             }
         }
 
-        return 2 * farthestOwnPiece + myRand();
+        return 2.0 * abs(farthestOwnPiece - startY) + myRand();
 
     }; // end offHeuristic_2
 
     int playerH[2] = {player0, player1};
+    int ab[2] = {useAlphaBeta0, useAlphaBeta1}; // alpha beta
 
     State state;
 
@@ -416,28 +442,30 @@ int test(int player0, int player1, int useAlphaBeta) {
                 player[i] = new HumanPlayer();
                 break;
             case 1:
-                player[i] = new Player<decltype(defHeuristic_1)>(static_cast<Worker>(i), defHeuristic_1, useAlphaBeta);
+                player[i] = new Player<decltype(defHeuristic_1)>(static_cast<Worker>(i), defHeuristic_1, ab[i]);
                 break;
             case 2:
-                player[i] = new Player<decltype(offHeuristic_1)>(static_cast<Worker>(i), offHeuristic_1, useAlphaBeta);
+                player[i] = new Player<decltype(offHeuristic_1)>(static_cast<Worker>(i), offHeuristic_1, ab[i]);
                 break;
             case 3:
-                player[i] = new Player<decltype(defHeuristic_2)>(static_cast<Worker>(i), defHeuristic_2, useAlphaBeta);
+                player[i] = new Player<decltype(defHeuristic_2)>(static_cast<Worker>(i), defHeuristic_2, ab[i]);
                 break;
             case 4:
-                player[i] = new Player<decltype(offHeuristic_2)>(static_cast<Worker>(i), offHeuristic_2, useAlphaBeta);
+                player[i] = new Player<decltype(offHeuristic_2)>(static_cast<Worker>(i), offHeuristic_2, ab[i]);
                 break;
         }
     }
 
     int totalMoves = 0;
 
-    puts(state.toString().c_str());
+    // char c = 'x';
+
+    // puts(state.toString().c_str());
     while (state.checkWinner() == Worker::NONE) {
         ++totalMoves;
         currentPlayer = static_cast<int>(state.opponent(static_cast<Worker>(currentPlayer)));
         nextMove = player[currentPlayer]->nextMove(state);
-        system("cls");
+        /* system("cls");
         printf(
             "%c: (%d, %d) --> (%d, %d)\n",
             static_cast<Worker>(currentPlayer) == Worker::WHITE ? 'W' : 'B',
@@ -445,10 +473,14 @@ int test(int player0, int player1, int useAlphaBeta) {
             nextMove.first.y,
             nextMove.second.x,
             nextMove.second.y
-        );
+        ); */
         state = state.nextState(nextMove);
-        puts(state.toString().c_str());
+        // puts(state.toString().c_str());
+        // c = 'x';
+        // while (c != 'n') c = getchar();
     }
+
+    puts(state.toString().c_str());
 
     printf("winner: player%d\n", currentPlayer + 1);
     printf("totalMoves = %d\n", totalMoves);
@@ -469,6 +501,8 @@ int test(int player0, int player1, int useAlphaBeta) {
         printf("average Nodes = %f\n", (double) totalNodes / expandedNodesVec.size());
         printf("totalTime = %f\n", totalTime);
         printf("average time = %f\n", totalTime / timeVec.size());
+        printf("captured = %d\n", BOARD_WIDTH * 2 - state.getPiecesLeft(static_cast<Worker>( (i + 1) % 2 )));
+
         putchar('\n');
     }
 
@@ -481,11 +515,12 @@ int test(int player0, int player1, int useAlphaBeta) {
 
 int main() {
 
-    int useAlphaBeta = 0;
+    int useAlphaBeta0 = 1;
+    int useAlphaBeta1 = 1;
     int winGames[2] = {0, 0};
-    // int player0 = 1, player1 = 4;
+    int player0 = 1, player1 = 4;
     // int player0 = 2, player1 = 3;
-    int player0 = 1, player1 = 0;
+    // int player0 = 1, player1 = 0;
 
     // scanf("%d", &useAlphaBeta);
     /* for (int i = 0; i < 2; ++i) {
@@ -495,9 +530,11 @@ int main() {
         } while(playerH[i] <= 0 || playerH[i] >= 5); // change to < 0 for human player
     } */
 
+    srand(time(0));
+
     for (int i = 0; i < 1; ++i) {
         printf("i = %d\n", i);
-        ++winGames[test(player0, player1, useAlphaBeta)];
+        ++winGames[test(player0, player1, useAlphaBeta0, useAlphaBeta1)];
     }
 
     printf("%d:%d\n", winGames[0], winGames[1]);
