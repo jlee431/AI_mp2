@@ -6,9 +6,16 @@ from imageio import *
 import numpy as np
 
 # Print USAGE information
-if(len(sys.argv) !=2):
-	print("USAGE: csp.py input_file")
+if(len(sys.argv) != 3):
+	print("USAGE: csp.py input_file iq:(0,1,2)")
 	sys.exit()
+
+# Set search type
+iq = sys.argv[2]
+isSmart = False
+if(int(iq) > 0):
+	isSmart = True
+
 
 # Record start time
 start_time = timeit.default_timer()
@@ -185,10 +192,6 @@ def adjustNearbyDomains(variables, domains, x, y):
 			except(KeyError):
 				pass
 
-			# Check if a domain was emptied
-			if(not domains[n_y][n_x]):
-				# True value indicates assignment is invalid
-				return True
 
 	# Assignment is still valid 
 	return False
@@ -473,9 +476,6 @@ attempts = [0]
 # Initialize domains
 domains = initDomains()
 
-# Set whether to use smart or dumb solver
-isSmart = False
-
 # Set whether the soultuion should be output
 shouldOutput = False
 
@@ -499,6 +499,7 @@ for line in variables:
 			sys.stdout.write(c)
 		else:
 			sys.stdout.write('_')
+		sys.stdout.write(' ')
 	sys.stdout.write('\n')
 
 if(shouldOutput):
