@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -56,8 +57,15 @@ public:
         return *this;
     }
 
-    // TODO
-    // State nextState(const Move &move) const { }
+    // assuming legal move
+    State nextState(const Move move) {
+        State newState = *this;
+        int dieWorker = static_cast<int>(newState.state[move.second.y][move.second.x]);
+        if (dieWorker < 2) --piecesLeft[dieWorker];
+        newState.state[move.second.y][move.second.x] = newState.state[move.first.y][move.first.x];
+        newState.state[move.first.y][move.first.x] = Worker::NONE;
+        return newState;
+    }
 
     Worker checkWinner() const {
         for (int i = 0; i < 2; ++i) {
@@ -133,8 +141,8 @@ class Player {
 
     int numOfExpandedNodes;
 
+    vector<int> expandedNodesVec;
     // TODO
-    // vector<int> expandedNodesVec;
     // vector<time> timeVec;
 
     int capturedWorkers;
@@ -153,20 +161,90 @@ public:
       , depth(useAlphaBeta ? 5 : 3)
     { }
 
-    /* Move nextMove(const State state, const int curentDepth, const Worker currentWorker) {
+    double minMax(
+        State state,
+        const int curentDepth,
+        const Worker currentWorker,
+        double &alphaScore,
+        double &betaScore,
+        int &expandedNodes
+    ) {
+
+        if (curentDepth == 0) return heuristic_f(state, currentWorker);
+
+        const bool isMax = currentWorker == worker;
 
         vector<Move> moves = state.possibleMoves(currentWorker);
+        const int N = moves.size();
 
-        int a = curentDepth;
-        ++a;
+        double bestScore = isMax ? INT_MIN : INT_MAX, tempScore;
 
+        auto comp = [&isMax](double tempScore, double bestScore) -> bool {
+            if (isMax) return tempScore > bestScore;
+            return tempScore < bestScore;
+        };
 
+        for (int i = 0; i < N; ++i) {
 
-    }
+            tempScore = minMax(
+                state.nextState(moves[i]),
+                curentDepth + 1,
+                state.opponent(currentWorker),
+                alphaScore,
+                betaScore,
+                ++expandedNodes
+            );
+
+            if (comp(tempScore, bestScore)) bestScore = tempScore;
+
+            if (useAlphaBeta) {
+                if (isMax) {
+                    if (bestScore > betaScore) break;
+                    if (bestScore > alphaScore) alphaScore = bestScore;
+                } else {
+                    if (bestScore < alphaScore) break;
+                    if (bestScore < betaScore) betaScore = bestScore;
+                }
+            }
+
+        } // end for i
+
+        return bestScore;
+
+    } // end alphaBeta
 
     Move nextMove(State &state) {
-        return nextMove(state, depth, worker);
-    } */
+
+        double alphaScore = INT_MIN, betaScore = INT_MAX;
+
+        vector<Move> moves = state.possibleMoves(worker);
+        const int N = moves.size();
+
+        double bestScore = INT_MIN, tempScore;
+        int best_i = 0;
+
+        int expandedNodes = 0;
+
+        for (int i = 0; i < N; ++i) {
+            tempScore = minMax(
+                state.nextState(moves[i]),
+                depth + 1,
+                state.opponent(worker),
+                alphaScore,
+                betaScore,
+                ++expandedNodes
+            );
+            if (tempScore > bestScore) {
+                bestScore = tempScore;
+                best_i = i;
+            }
+        }
+
+        expandedNodesVec.push_back(expandedNodes);
+
+        return moves[best_i];
+
+    } // end nextMove
 
 };
 
