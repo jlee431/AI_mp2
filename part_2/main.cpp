@@ -198,6 +198,21 @@ public:
     }
 };
 
+class HumanPlayer : public DummyPlayer {
+public:
+    ~HumanPlayer() override {}
+    Move nextMove(State &state) override {
+        int x1, y1, x2, y2;
+        Move move({-1, -1}, {-1, -1});
+        while (!state.isLegalMove(move)) {
+            puts("x1 y1 x2 y2");
+            scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
+            move = Move({x1, y1}, {x2, y2});
+        }
+        return move;
+    } // end nextMove
+};
+
 template<typename H>
 class Player : public DummyPlayer {
 
@@ -397,6 +412,9 @@ int test(int player0, int player1, int useAlphaBeta) {
 
     for (int i = 0; i < 2; ++i) {
         switch (playerH[i]) {
+            case 0:
+                player[i] = new HumanPlayer();
+                break;
             case 1:
                 player[i] = new Player<decltype(defHeuristic_1)>(static_cast<Worker>(i), defHeuristic_1, useAlphaBeta);
                 break;
@@ -414,6 +432,7 @@ int test(int player0, int player1, int useAlphaBeta) {
 
     int totalMoves = 0;
 
+    puts(state.toString().c_str());
     while (state.checkWinner() == Worker::NONE) {
         ++totalMoves;
         currentPlayer = static_cast<int>(state.opponent(static_cast<Worker>(currentPlayer)));
@@ -428,8 +447,7 @@ int test(int player0, int player1, int useAlphaBeta) {
             nextMove.second.y
         );
         state = state.nextState(nextMove);
-        string str = state.toString();
-        puts(str.c_str());
+        puts(state.toString().c_str());
     }
 
     printf("winner: player%d\n", currentPlayer + 1);
@@ -466,7 +484,8 @@ int main() {
     int useAlphaBeta = 0;
     int winGames[2] = {0, 0};
     // int player0 = 1, player1 = 4;
-    int player0 = 2, player1 = 3;
+    // int player0 = 2, player1 = 3;
+    int player0 = 1, player1 = 0;
 
     // scanf("%d", &useAlphaBeta);
     /* for (int i = 0; i < 2; ++i) {
