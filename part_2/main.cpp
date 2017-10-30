@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -45,13 +46,24 @@ public:
         }
     }
 
-    State(const State &other) : state(other.state) {
+    State(const State &other) {
+        state.assign(WIDTH, vector<Worker>(WIDTH, Worker::NONE));
+        for (int y = 0; y < WIDTH; ++y) {
+            for (int x = 0; x < WIDTH; ++x) {
+                state[y][x] = other.state[y][x];
+            }
+        }
         for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
     }
 
     State& operator=(const State &other) {
         if (this != &other) {
-            state = other.state;
+            state.assign(WIDTH, vector<Worker>(WIDTH, Worker::NONE));
+            for (int y = 0; y < WIDTH; ++y) {
+                for (int x = 0; x < WIDTH; ++x) {
+                    state[y][x] = other.state[y][x];
+                }
+            }
             for (int i = 0; i < 2; ++i) piecesLeft[i] = other.piecesLeft[i];
         }
         return *this;
@@ -61,7 +73,7 @@ public:
     State nextState(const Move move) {
         State newState = *this;
         int dieWorker = static_cast<int>(newState.state[move.second.y][move.second.x]);
-        if (dieWorker < 2) --piecesLeft[dieWorker];
+        if (dieWorker < 2) --newState.piecesLeft[dieWorker];
         newState.state[move.second.y][move.second.x] = newState.state[move.first.y][move.first.x];
         newState.state[move.first.y][move.first.x] = Worker::NONE;
         return newState;
@@ -108,6 +120,7 @@ public:
 
         for (int y = 0; y < WIDTH; ++y) {
             for (int x = 0; x < WIDTH; ++x) {
+                if (state[y][x] != worker) continue;
                 for (int i = 0; i < 3; ++i) {
                     tempMove = make_pair<Position, Position>(Position(x, y), Position(x, y) + next[posSel][i]);
                     if (isLegalMove(tempMove)) output.push_back(tempMove);
@@ -131,13 +144,40 @@ public:
         return state;
     }
 
+    string toString() {
+        string output = "  0 1 2 3 4 5 6 7\n";
+        char temp;
+        for (int y = 0; y < BOARD_WIDTH; ++y) {
+            output.push_back(y + '0');
+            output.push_back(' ');
+            for (int x = 0; x < BOARD_WIDTH; ++x) {
+                switch (state[y][x]) {
+                    case Worker::WHITE: temp = 'W'; break;
+                    case Worker::BLACK: temp = 'B'; break;
+                    default: temp = ' '; break;
+                }
+                output.push_back(temp);
+                output.push_back(' ');
+            }
+            output.push_back('\n');
+        }
+        output += "-------------------";
+        return output;
+    }
+
 }; // end class State
 
+class DummyPlayer {
+public:
+    virtual ~DummyPlayer() {}
+    virtual Move nextMove(State&) = 0;
+};
+
 template<typename H>
-class Player {
+class Player : public DummyPlayer {
 
     const Worker worker;
-    const H heuristic_f;
+    const H &heuristic_f;
 
     int numOfExpandedNodes;
 
@@ -158,8 +198,10 @@ public:
       , numOfExpandedNodes(0)
       , capturedWorkers(0)
       , useAlphaBeta(useAlphaBeta)
-      , depth(useAlphaBeta ? 5 : 3)
+      , depth(useAlphaBeta ? 3 : 3)
     { }
+
+    ~Player() override {}
 
     double minMax(
         State state,
@@ -188,7 +230,7 @@ public:
 
             tempScore = minMax(
                 state.nextState(moves[i]),
-                curentDepth + 1,
+                curentDepth - 1,
                 state.opponent(currentWorker),
                 alphaScore,
                 betaScore,
@@ -213,7 +255,7 @@ public:
 
     } // end alphaBeta
 
-    Move nextMove(State &state) {
+    Move nextMove(State &state) override {
 
         double alphaScore = INT_MIN, betaScore = INT_MAX;
 
@@ -228,7 +270,7 @@ public:
         for (int i = 0; i < N; ++i) {
             tempScore = minMax(
                 state.nextState(moves[i]),
-                depth + 1,
+                depth - 1,
                 state.opponent(worker),
                 alphaScore,
                 betaScore,
@@ -253,7 +295,7 @@ double myRand() {
     return (rand() % 100) / 100.0;
 }
 
-int main() {
+int test(int player1, int player2, int useAlphaBeta) {
 
     auto defHeuristic_1 = [](State &state, Worker worker) -> double {
         // 2 * number_of_own_pieces_remaining + random()
@@ -316,13 +358,79 @@ int main() {
 
     }; // end offHeuristic_2
 
+    int playerH[2] = {player1, player2};
+
     State state;
 
-    // delete later
-    defHeuristic_1(state, Worker::BLACK);
-    offHeuristic_1(state, Worker::BLACK);
-    defHeuristic_2(state, Worker::BLACK);
-    offHeuristic_2(state, Worker::BLACK);
+    DummyPlayer **player = new DummyPlayer*[2];
+
+    Move nextMove;
+    int currentPlayer = (myRand() < 0.5) ? 0 : 1;
+
+    for (int i = 0; i < 2; ++i) {
+        switch (playerH[i]) {
+            case 1:
+                player[i] = new Player<decltype(defHeuristic_1)>(static_cast<Worker>(i), defHeuristic_1, useAlphaBeta);
+                break;
+            case 2:
+                player[i] = new Player<decltype(offHeuristic_1)>(static_cast<Worker>(i), offHeuristic_1, useAlphaBeta);
+                break;
+            case 3:
+                player[i] = new Player<decltype(defHeuristic_2)>(static_cast<Worker>(i), defHeuristic_2, useAlphaBeta);
+                break;
+            case 4:
+                player[i] = new Player<decltype(offHeuristic_2)>(static_cast<Worker>(i), offHeuristic_2, useAlphaBeta);
+                break;
+        }
+    }
+
+    while (state.checkWinner() == Worker::NONE) {
+        currentPlayer = static_cast<int>(state.opponent(static_cast<Worker>(currentPlayer)));
+        nextMove = player[currentPlayer]->nextMove(state);
+        /* system("cls");
+        printf(
+            "%c: (%d, %d) --> (%d, %d)\n",
+            currentWorker == Worker::WHITE ? 'W' : 'B',
+            nextMove.first.x,
+            nextMove.first.y,
+            nextMove.second.x,
+            nextMove.second.y
+        ); */
+        state = state.nextState(nextMove);
+        // string str = state.toString();
+        // puts(str.c_str());
+    }
+
+    // printf("winner: player%d\n", static_cast<int>(currentWorker) + 1);
+
+    for (int i = 0; i < 2; ++i) delete player[i];
+    delete[] player;
+
+    return currentPlayer;
+
+}
+
+int main() {
+
+    int useAlphaBeta = 1;
+    int winGames[2] = {0, 0};
+    // int player1 = 1, player2 = 4;
+    int player1 = 2, player2 = 3;
+
+    // scanf("%d", &useAlphaBeta);
+    /* for (int i = 0; i < 2; ++i) {
+        do {
+            printf("player%d: ", i + 1);
+            scanf("%d", &playerH[i]);
+        } while(playerH[i] <= 0 || playerH[i] >= 5); // change to < 0 for human player
+    } */
+
+    for (int i = 0; i < 100; ++i) {
+        printf("i = %d\n", i);
+        ++winGames[test(player1, player2, useAlphaBeta)];
+    }
+
+    printf("%d:%d\n", winGames[0], winGames[1]);
 
     return 0;
 
