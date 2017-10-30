@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
@@ -10,6 +11,20 @@
 #define BOARD_WIDTH 8
 
 using namespace std;
+
+class Timer {
+    // credit: https://gist.github.com/tzutalin/fd0340a93bb8d998abb9
+    typedef std::chrono::high_resolution_clock clock_;
+    std::chrono::time_point<clock_> m_beg;
+public:
+    Timer() : m_beg(clock_::now()) {}
+    void reset() { m_beg = clock_::now(); }
+    double elapsed() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            clock_::now() - m_beg
+        ).count();
+    }
+};
 
 struct Position {
     int x, y;
@@ -168,9 +183,19 @@ public:
 }; // end class State
 
 class DummyPlayer {
+protected:
+    vector<int> expandedNodesVec;
+    vector<double> timeVec; // milliseconds
 public:
     virtual ~DummyPlayer() {}
     virtual Move nextMove(State&) = 0;
+    const vector<int>& getExpandedNodesVec() {
+        return expandedNodesVec;
+    }
+
+    const vector<double>& getTimeVec() {
+        return timeVec;
+    }
 };
 
 template<typename H>
@@ -181,14 +206,12 @@ class Player : public DummyPlayer {
 
     int numOfExpandedNodes;
 
-    vector<int> expandedNodesVec;
-    // TODO
-    // vector<time> timeVec;
-
     int capturedWorkers;
 
     const bool useAlphaBeta;
     const int depth;
+
+    Timer timer;
 
 public:
 
@@ -267,6 +290,8 @@ public:
 
         int expandedNodes = 0;
 
+        timer.reset();
+
         for (int i = 0; i < N; ++i) {
             tempScore = minMax(
                 state.nextState(moves[i]),
@@ -282,20 +307,22 @@ public:
             }
         }
 
+        timeVec.push_back(timer.elapsed());
+
         expandedNodesVec.push_back(expandedNodes);
 
         return moves[best_i];
 
     } // end nextMove
 
-};
+}; // end class Player
 
 double myRand() {
     srand(time(0));
     return (rand() % 100) / 100.0;
 }
 
-int test(int player1, int player2, int useAlphaBeta) {
+int test(int player0, int player1, int useAlphaBeta) {
 
     auto defHeuristic_1 = [](State &state, Worker worker) -> double {
         // 2 * number_of_own_pieces_remaining + random()
@@ -358,14 +385,15 @@ int test(int player1, int player2, int useAlphaBeta) {
 
     }; // end offHeuristic_2
 
-    int playerH[2] = {player1, player2};
+    int playerH[2] = {player0, player1};
 
     State state;
 
     DummyPlayer **player = new DummyPlayer*[2];
 
     Move nextMove;
-    int currentPlayer = (myRand() < 0.5) ? 0 : 1;
+    // int currentPlayer = (myRand() < 0.5) ? 0 : 1;
+    int currentPlayer = 0;
 
     for (int i = 0; i < 2; ++i) {
         switch (playerH[i]) {
@@ -384,24 +412,47 @@ int test(int player1, int player2, int useAlphaBeta) {
         }
     }
 
+    int totalMoves = 0;
+
     while (state.checkWinner() == Worker::NONE) {
+        ++totalMoves;
         currentPlayer = static_cast<int>(state.opponent(static_cast<Worker>(currentPlayer)));
         nextMove = player[currentPlayer]->nextMove(state);
-        /* system("cls");
+        system("cls");
         printf(
             "%c: (%d, %d) --> (%d, %d)\n",
-            currentWorker == Worker::WHITE ? 'W' : 'B',
+            static_cast<Worker>(currentPlayer) == Worker::WHITE ? 'W' : 'B',
             nextMove.first.x,
             nextMove.first.y,
             nextMove.second.x,
             nextMove.second.y
-        ); */
+        );
         state = state.nextState(nextMove);
-        // string str = state.toString();
-        // puts(str.c_str());
+        string str = state.toString();
+        puts(str.c_str());
     }
 
-    // printf("winner: player%d\n", static_cast<int>(currentWorker) + 1);
+    printf("winner: player%d\n", currentPlayer + 1);
+    printf("totalMoves = %d\n", totalMoves);
+
+    puts("\nexpandedNodes:\n");
+    for (int i = 0; i < 2; ++i) {
+        printf("player%d:\n", i);
+        int totalNodes = 0;
+        double totalTime = 0;
+
+        const vector<int> &expandedNodesVec = player[i]->getExpandedNodesVec();
+        const vector<double> &timeVec = player[i]->getTimeVec();
+
+        for (int nodes : expandedNodesVec) totalNodes += nodes;
+        for (double time : timeVec) totalTime += time;
+
+        printf("totalNodes = %d\n", totalNodes);
+        printf("average Nodes = %f\n", (double) totalNodes / expandedNodesVec.size());
+        printf("totalTime = %f\n", totalTime);
+        printf("average time = %f\n", totalTime / timeVec.size());
+        putchar('\n');
+    }
 
     for (int i = 0; i < 2; ++i) delete player[i];
     delete[] player;
@@ -412,10 +463,10 @@ int test(int player1, int player2, int useAlphaBeta) {
 
 int main() {
 
-    int useAlphaBeta = 1;
+    int useAlphaBeta = 0;
     int winGames[2] = {0, 0};
-    // int player1 = 1, player2 = 4;
-    int player1 = 2, player2 = 3;
+    // int player0 = 1, player1 = 4;
+    int player0 = 2, player1 = 3;
 
     // scanf("%d", &useAlphaBeta);
     /* for (int i = 0; i < 2; ++i) {
@@ -425,9 +476,9 @@ int main() {
         } while(playerH[i] <= 0 || playerH[i] >= 5); // change to < 0 for human player
     } */
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1; ++i) {
         printf("i = %d\n", i);
-        ++winGames[test(player1, player2, useAlphaBeta)];
+        ++winGames[test(player0, player1, useAlphaBeta)];
     }
 
     printf("%d:%d\n", winGames[0], winGames[1]);
