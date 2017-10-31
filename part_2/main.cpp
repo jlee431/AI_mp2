@@ -244,7 +244,7 @@ public:
       , numOfExpandedNodes(0)
       , capturedWorkers(0)
       , useAlphaBeta(useAlphaBeta)
-      , depth(useAlphaBeta ? 3 : 3)
+      , depth(useAlphaBeta ? 4 : 3)
     { }
 
     ~Player() override {}
@@ -434,7 +434,7 @@ int test(int player0, int player1, int useAlphaBeta0, int useAlphaBeta1) {
 
     Move nextMove;
     // int currentPlayer = (myRand() < 0.5) ? 0 : 1;
-    int currentPlayer = 0;
+    int currentPlayer = 1;
 
     for (int i = 0; i < 2; ++i) {
         switch (playerH[i]) {
@@ -482,7 +482,7 @@ int test(int player0, int player1, int useAlphaBeta0, int useAlphaBeta1) {
 
     puts(state.toString().c_str());
 
-    printf("winner: player%d\n", currentPlayer + 1);
+    printf("winner: player%d\n", currentPlayer);
     printf("totalMoves = %d\n", totalMoves);
 
     puts("\nexpandedNodes:\n");
@@ -518,7 +518,7 @@ int main() {
     int useAlphaBeta0 = 1;
     int useAlphaBeta1 = 1;
     int winGames[2] = {0, 0};
-    int player0 = 1, player1 = 4;
+    int player0 = 4, player1 = 3;
     // int player0 = 2, player1 = 3;
     // int player0 = 1, player1 = 0;
 
